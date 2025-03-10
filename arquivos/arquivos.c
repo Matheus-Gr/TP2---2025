@@ -37,7 +37,25 @@ void salvar_binario(const char *nome_arquivo, Registro *registros, int n) {
     printf("Arquivo %s gerado com sucesso!\n", nome_arquivo);
 }
 
-void ler_binario(const char *nome_arquivo) {
+void ler_binario(int situacao) {
+
+    const char* nome_arquivo = "";
+
+    switch (situacao) {
+        case 1:
+            nome_arquivo = "aleatorio.bin";
+            break;
+        case 2:
+            nome_arquivo = "crescente.bin";
+            break;
+        case 3:
+            nome_arquivo = "decrescente.bin";
+            break;
+        default:
+            printf("Situacao invalida!\n");
+    }
+
+
     FILE *arquivo = fopen(nome_arquivo, "rb");
     if (!arquivo) {
         printf("Erro ao abrir %s\n", nome_arquivo);
@@ -98,10 +116,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
+    int situacao = atoi(argv[2]);
+
     if (strcmp(argv[1], "gerar") == 0) {
         gerar_arquivos();
     } else if (strcmp(argv[1], "ler") == 0 && argc == 3) {
-        ler_binario(argv[2]);
+        ler_binario(situacao);
     } else {
         printf("Opção inválida!\n");
     }

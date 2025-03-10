@@ -13,6 +13,7 @@ comando_compilacao = [
     'main.c',
     'intercalacao_2f.c',
     '-o', comando_base,
+    '-lm',
     '-Wall'
 ]
 
@@ -34,5 +35,5 @@ if resultado_execucao.returncode != 0:
     print("Erro na execução. Verifique os parâmetros.")
     exit(1)
 
-print(f"Removendo o executável: {comando_base}")
-os.remove(comando_base)
+# print(f"Removendo o executável: {comando_base}")
+# os.remove(comando_base)

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>  // Adicionar esta linha no início
 #include "intercalacao_2f.h"
+#include <locale.h>
 
 int main(int argc, char *argv[]) {
     if (argc < 4) {
@@ -31,10 +32,16 @@ int main(int argc, char *argv[]) {
             return 1;
     }
 
+    Estatisticas estatisticas;
+    inicializarEstatisticas(&estatisticas);
+
     switch (metodo) {
         case 1:
             printf("Metodo 1 - Intercalacao de 2 fitas\n");
-            intercalacao_2f(arquivoEntrada, quantidade, exibirResultado);
+            intercalacao_2f(arquivoEntrada, quantidade, exibirResultado, 
+                &estatisticas);
+            finalizarEstatisticas(&estatisticas);
+            mostrarEstatisticas(&estatisticas);
             break;
         case 2:
             printf("Método 2!\n");

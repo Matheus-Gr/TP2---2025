@@ -2,7 +2,7 @@ import os
 
 # Definição dos parâmetros
 OPCAO = "gerar"  # Opções: "gerar" ou "ler"
-ARQUIVO = "decrescente.bin"  # Apenas necessário se OPCAO for "ler"
+ARQUIVO = "2"  # Apenas necessário se OPCAO for "ler"
 
 
 def compilar():
