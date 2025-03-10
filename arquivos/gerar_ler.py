@@ -1,7 +1,7 @@
 import os
 
 # Definição dos parâmetros
-OPCAO = "ler"  # Opções: "gerar" ou "ler"
+OPCAO = "gerar"  # Opções: "gerar" ou "ler"
 ARQUIVO = "decrescente.bin"  # Apenas necessário se OPCAO for "ler"
 
 

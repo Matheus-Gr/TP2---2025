@@ -10,12 +10,14 @@
 
 int MAX_REGISTROS;  // Tamanho do bloco, deve ser definido dinamicamente
 
+// Função de comparação
 int comparar(const void *a, const void *b) {
     Registro *regA = (Registro *)a;
     Registro *regB = (Registro *)b;
     return (regA->nota > regB->nota) - (regA->nota < regB->nota);
 }
 
+// Função para distribuir blocos nas fitas
 void distribuir_blocos(FILE *arquivo, FILE *fitas[]) {
     Registro *buffer = (Registro *)malloc(MAX_REGISTROS * sizeof(Registro));  // Usando memória dinâmica
     int i = 0, fita_atual = 0;
@@ -38,6 +40,7 @@ void distribuir_blocos(FILE *arquivo, FILE *fitas[]) {
     free(buffer);  // Liberar memória alocada
 }
 
+// Função para intercalar fitas
 void intercalar_fitas(FILE *fitasEntrada[], FILE *fitasSaida[]) {
     Registro registros[NUM_FITAS_ENTRADA];
     int ativo[NUM_FITAS_ENTRADA];
@@ -66,8 +69,10 @@ void intercalar_fitas(FILE *fitasEntrada[], FILE *fitasSaida[]) {
     }
 }
 
+// Função principal de ordenação externa
 void intercalacao_2f(const char *arquivoEntrada, int quantidade, int exibirResultado) {
-    MAX_REGISTROS = quantidade;  // Definir dinamicamente o tamanho do bloco
+    // Definir o tamanho do bloco com base na quantidade de registros
+    MAX_REGISTROS = quantidade;
 
     FILE *arquivo = fopen(arquivoEntrada, "rb");
     if (!arquivo) {
@@ -75,16 +80,11 @@ void intercalacao_2f(const char *arquivoEntrada, int quantidade, int exibirResul
         return;
     }
 
-    // Fitas de entrada e saída
-    FILE *fitasEntrada[NUM_FITAS_ENTRADA], *fitasSaida[NUM_FITAS_SAIDA];
-    for (int i = 0; i < NUM_FITAS_ENTRADA; i++) {
+    FILE *fitasEntrada[NUM_FITAS_TOTAL], *fitasSaida[NUM_FITAS_TOTAL];
+    for (int i = 0; i < NUM_FITAS_TOTAL; i++) {
         char nome[20];
-        sprintf(nome, "arquivos/fita_entrada%d.bin", i);
+        sprintf(nome, "fitas/fita%d.bin", i + 1);
         fitasEntrada[i] = fopen(nome, "wb+");
-    }
-    for (int i = 0; i < NUM_FITAS_SAIDA; i++) {
-        char nome[20];
-        sprintf(nome, "arquivos/fita_saida%d.bin", i);
         fitasSaida[i] = fopen(nome, "wb+");
     }
 
@@ -92,10 +92,10 @@ void intercalacao_2f(const char *arquivoEntrada, int quantidade, int exibirResul
     fclose(arquivo);
 
     int numPassos = 0;
-    while (numPassos < 10) {  // Definindo 10 passos de intercalação como exemplo
+    while (numPassos < 10) {
         intercalar_fitas(fitasEntrada, fitasSaida);
-        FILE *temp[NUM_FITAS_ENTRADA];
-        for (int i = 0; i < NUM_FITAS_ENTRADA; i++) {
+        FILE *temp[NUM_FITAS_TOTAL];
+        for (int i = 0; i < NUM_FITAS_TOTAL; i++) {
             temp[i] = fitasEntrada[i];
             fitasEntrada[i] = fitasSaida[i];
             fitasSaida[i] = temp[i];
@@ -103,32 +103,21 @@ void intercalacao_2f(const char *arquivoEntrada, int quantidade, int exibirResul
         numPassos++;
     }
 
-    // Copiar os dados da fita de saída final para o arquivo de resultado
-    FILE *resultado = fopen("resultado_ordenado.bin", "wb");
-    if (!resultado) {
-        printf("Erro ao criar arquivo de saida!\n");
-        return;
-    }
-    Registro registro;
-    while (fread(&registro, sizeof(Registro), 1, fitasSaida[0])) {
-        fwrite(&registro, sizeof(Registro), 1, resultado);
-    }
-    fclose(resultado);
-
-    printf("Ordenacao concluida! Dados gravados em resultado_ordenado.bin\n");
-
-    // Exibir os resultados na tela se a flag -P for passada
-    if (exibirResultado) {
-        rewind(resultado);  // Voltar ao início do arquivo de saída
-        while (fread(&registro, sizeof(Registro), 1, resultado)) {
+    if (exibirResultado == 1) {
+        // Exibir resultados da ordenação
+        printf("Resultado da ordenacao:\n");
+        Registro registro;
+        // Leia os registros da última fita de saída
+        FILE *fitaResultado = fitasSaida[0];  // Considerando que a fita 0 contém o resultado
+        while (fread(&registro, sizeof(Registro), 1, fitaResultado)) {
             printf("Inscricao: %s, Nota: %.2f\n", registro.inscricao, registro.nota);
         }
     }
 
-    for (int i = 0; i < NUM_FITAS_ENTRADA; i++) {
+    printf("Ordenacao concluida!\n");
+
+    for (int i = 0; i < NUM_FITAS_TOTAL; i++) {
         fclose(fitasEntrada[i]);
-    }
-    for (int i = 0; i < NUM_FITAS_SAIDA; i++) {
         fclose(fitasSaida[i]);
     }
 }
