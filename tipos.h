@@ -30,11 +30,10 @@ typedef struct {
 } Fitas;
 
 typedef struct {
-    int numLeituras;
-    int numEscritas;
-    int numComparacoes;
-    clock_t inicioTempo; // Tempo inicial
-    double tempoExecucao; // Tempo total de execução
+    int comparacoes;
+    int transferencias;
+    int quantidade;
+    double tempoGasto;
 } Estatisticas;
 
 void inicializarEstatisticas(Estatisticas* stats);

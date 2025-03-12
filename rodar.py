@@ -3,7 +3,7 @@ import os
 
 comando_base = 'ordenar.exe'
 
-metodo = str(1)  # Método 1 (intercalacao_2f)
+metodo = str(2)  # Método 1 (intercalacao_2f)
 quantidade = str(100)  # Quantidade de registros
 situacao = str(1)  # Situação (1, 2 ou 3)
 imprimir = '-P'  # Parâmetro opcional para imprimir resultados
@@ -12,6 +12,8 @@ comando_compilacao = [
     'gcc',
     'main.c',
     'intercalacao_2f.c',
+    'intercalacao_f1.c',
+    'tipos.c',  # Adicionado tipos.c
     '-o', comando_base,
     '-lm',
     '-Wall'

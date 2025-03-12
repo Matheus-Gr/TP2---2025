@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>  // Adicionar esta linha no início
+#include <string.h>
 #include "intercalacao_2f.h"
+#include "intercalacao_f1.h"
+#include "tipos.h"
 #include <locale.h>
 
 int main(int argc, char *argv[]) {
@@ -34,25 +36,26 @@ int main(int argc, char *argv[]) {
 
     Estatisticas estatisticas;
     inicializarEstatisticas(&estatisticas);
+    estatisticas.quantidade = quantidade;
 
     switch (metodo) {
         case 1:
             printf("Metodo 1 - Intercalacao de 2 fitas\n");
-            intercalacao_2f(arquivoEntrada, quantidade, exibirResultado, 
-                &estatisticas);
-            finalizarEstatisticas(&estatisticas);
-            mostrarEstatisticas(&estatisticas);
+            intercalacao_2f(arquivoEntrada, quantidade, exibirResultado, &estatisticas);
             break;
         case 2:
-            printf("Método 2!\n");
+            printf("Metodo 2 - Intercalacao f+1\n");
+            intercalacao_f1(arquivoEntrada, quantidade, exibirResultado, &estatisticas);
             break;
         case 3:
-            printf("Método 3!\n");
-            break;
+            printf("Método 3 não implementado!\n");
+            return 1;
         default:
             printf("Método inválido!\n");
             return 1;
     }
 
+    finalizarEstatisticas(&estatisticas);
+    mostrarEstatisticas(&estatisticas);
     return 0;
 }
