@@ -4,14 +4,12 @@
 #include "tipos.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h> 
+#include <string.h>
 
-void intercalacao_2f(const char* arquivoEntrada, int quantidade, int exibirResultado, Estatisticas* stats);
-void intercalarBlocos(Fitas* fitas, Estatisticas* stats);
-void gerarBlocosOrdenados(const char* arquivoEntrada, int quantidade, Fitas* fitas, Estatisticas* stats);
-int compararRegistros(const void* a, const void* b);
-void escreverRegistro(FILE* arquivo, Registro reg);
-Registro lerRegistro(FILE* arquivo);
-void printResultadoOrdenacao();
+int compararItens(const void *a, const void *b);
+
+void gerarBlocosOrdenados(const char *arquivoEntrada, int quantidade, Fita *fitas, Estatisticas *stats);
+
+void intercalacao_2f(const char *arquivoEntrada, int quantidade, int exibirResultado, Estatisticas *stats);
 
 #endif

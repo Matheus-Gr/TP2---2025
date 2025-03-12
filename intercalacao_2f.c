@@ -3,180 +3,263 @@
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
+#include "utils.h"
 
-#define NUM_FITAS 20  // 10 fitas de entrada + 10 fitas de saída
-#define MEMORIA_INTERNA 10  // Capacidade máxima da memória interna
+#define NUM_FITAS 20       // 10 fitas de entrada + 10 fitas de saída
+#define MEMORIA_INTERNA 10 // Capacidade máxima da memória interna
 
+int compararItens(const void *a, const void *b)
+{
+    Item *itemA = (Item *)a;
+    Item *itemB = (Item *)b;
 
-// Função para ler um registro do arquivo binário
-Registro lerRegistro(FILE* arquivo) {
-    Registro reg;
-    if (fread(&reg, sizeof(Registro), 1, arquivo) != 1) {
-        reg.inscricao[0] = '\0'; // Registro inválido
-        reg.nota = -1;
-    }
-    return reg;
-}
-
-// Função para escrever um registro no arquivo binário
-void escreverRegistro(FILE* arquivo, Registro reg) {
-    fwrite(&reg, sizeof(Registro), 1, arquivo);
-}
-
-// Função de comparação para qsort (ordena por nota)
-int compararRegistros(const void* a, const void* b) {
-    Registro* regA = (Registro*)a;
-    Registro* regB = (Registro*)b;
-    if (regA->nota < regB->nota) return -1;
-    if (regA->nota > regB->nota) return 1;
+    if (itemA->registro.nota < itemB->registro.nota)
+        return -1;
+    if (itemA->registro.nota > itemB->registro.nota)
+        return 1;
     return 0;
 }
 
-// Função para gerar blocos ordenados nas fitas de entrada
-void gerarBlocosOrdenados(const char* arquivoEntrada, int quantidade, Fitas* fitas, Estatisticas* stats) {
-    FILE* entrada = fopen(arquivoEntrada, "rb");
-    if (!entrada) {
-        perror("Erro ao abrir arquivo de entrada");
-        exit(1);
-    }
+void gerarBlocosOrdenados(const char *arquivoEntrada, int quantidade, Fita *fitas, Estatisticas *stats)
+{
+    FILE *entrada = inicializarArquivo(arquivoEntrada, "rb");
+    Item blocoSubstituicao[MEMORIA_INTERNA]; // Memória interna para armazenar registros
 
-    MemoriaInterna memoria;
-    memoria.tamanho = 0;
-    int fitaAtual = 0; // Alterna entre as 10 fitas de entrada
+    int qtdInicialParaLer;
+    int qtdItensQueFaltam = quantidade;
 
-    while (quantidade > 0) {
-        while (memoria.tamanho < MEMORIA_INTERNA && quantidade > 0) {
-            Registro reg = lerRegistro(entrada);
-            if (reg.nota == -1) break; // Fim do arquivo
-            memoria.registros[memoria.tamanho++] = reg;
-            quantidade--;
-            stats->numLeituras++;
-        }
+    int fitaAtual = 0; // Índice da fita de entrada atual
 
-        // Ordenar registros na memória
-        qsort(memoria.registros, memoria.tamanho, sizeof(Registro), compararRegistros);
+    // Lê os registros do arquivo de entrada em blocos de MEMORIA_INTERNA
+    while (qtdItensQueFaltam > 0)
+    {
+        qtdInicialParaLer = qtdItensQueFaltam >= MEMORIA_INTERNA ? MEMORIA_INTERNA : qtdItensQueFaltam;
+        qtdItensQueFaltam -= qtdInicialParaLer;
 
-        // Escrever o bloco ordenado na fita de saída atual
-        for (int i = 0; i < memoria.tamanho; i++) {
-            escreverRegistro(fitas->fitas[fitaAtual], memoria.registros[i]);
-            stats->numEscritas++;
-        }
+        // Lê os registros do arquivo de entrada
+        fread(blocoSubstituicao, sizeof(Item), qtdInicialParaLer, entrada);
+        stats->numLeituras++;
 
-        fitaAtual = (fitaAtual + 1) % (NUM_FITAS / 2); // Alterna entre as 10 fitas de entrada
-        memoria.tamanho = 0; // Limpa a memória interna
+        // Ordena os registros em memória interna usando qsort
+        qsort(blocoSubstituicao, qtdInicialParaLer, sizeof(Item), compararItens);
+        stats->numComparacoes++; // Estimativa de comparações
+
+        // Escreve o bloco ordenado na fita de entrada atual
+        fwrite(blocoSubstituicao, sizeof(Item), qtdInicialParaLer, fitas[fitaAtual].arquivo);
+        stats->numEscritas++;
+
+        // Atualiza o número de blocos e itens na fita atual
+        fitas[fitaAtual].nBlocos++;
+        fitas[fitaAtual].nItemsBloco = realloc(fitas[fitaAtual].nItemsBloco, fitas[fitaAtual].nBlocos * sizeof(int));
+        fitas[fitaAtual].nItemsBloco[fitas[fitaAtual].nBlocos - 1] = qtdInicialParaLer;
+
+        // Alterna para a próxima fita de entrada
+        fitaAtual = (fitaAtual + 1) % 10; // 10 fitas de entrada
     }
 
     fclose(entrada);
 }
 
-// Função para intercalar blocos ordenados entre as fitas de entrada e saída
-void intercalarBlocos(Fitas* fitas, Estatisticas* stats) {
-    int numFitasEntrada = NUM_FITAS / 2; // 10 fitas de entrada
-    int numFitasSaida = NUM_FITAS / 2;   // 10 fitas de saída
-
-    while (1) {
-        int todasVazias = 1;
-
-        // Alternar entre fitas de entrada e saída
-        for (int i = 0; i < numFitasEntrada; i++) {
-            FILE* fitaEntrada1 = fitas->fitas[i];
-            FILE* fitaEntrada2 = fitas->fitas[i + numFitasEntrada];
-            FILE* fitaSaida = fitas->fitas[i % numFitasSaida];
-
-            // Reposicionar fitas de entrada para o início
-            fseek(fitaEntrada1, 0, SEEK_SET);
-            fseek(fitaEntrada2, 0, SEEK_SET);
-
-            // Limpar fita de saída
-            fclose(fitaSaida);
-            fitaSaida = fopen("fitas/fita_saida_temp.bin", "w+b");
-            if (!fitaSaida) {
-                perror("Erro ao limpar fita de saída");
-                exit(1);
-            }
-
-            Registro reg1 = lerRegistro(fitaEntrada1);
-            Registro reg2 = lerRegistro(fitaEntrada2);
-
-            while (reg1.nota != -1 || reg2.nota != -1) {
-                if (reg1.nota != -1 && (reg2.nota == -1 || reg1.nota <= reg2.nota)) {
-                    escreverRegistro(fitaSaida, reg1);
-                    reg1 = lerRegistro(fitaEntrada1);
-                } else {
-                    escreverRegistro(fitaSaida, reg2);
-                    reg2 = lerRegistro(fitaEntrada2);
-                }
-                stats->numLeituras++;
-                stats->numEscritas++;
-                stats->numComparacoes++;
-            }
-
-            fseek(fitaSaida, 0, SEEK_END);
-            if (ftell(fitaSaida) > 0) todasVazias = 0;
-
-            fclose(fitaSaida);
-        }
-
-        if (todasVazias) break; // Se todas as fitas de entrada estiverem vazias, parar a intercalação
-    }
+void rewindFitas(Fita *fitas)
+{
+    for (int i = 0; i < NUM_2FFITAS; i++)
+        rewind(fitas[i].arquivo);
 }
 
-void printResultadoOrdenacao() {
-    FILE* fitaSaida = fopen("fitas/fita0.bin", "rb");
-    if (!fitaSaida) {
-        perror("Erro ao abrir fita de saida");
+// Função para intercalar os blocos das fitas de entrada e gerar o arquivo final ordenado
+void intercalarBlocos(Fita *fitas, Estatisticas *stats)
+{
+    enum TipoFita tipoFitaLeitura = ENTRADA;
+    int entrada = 0, saida = 10; // 10 fitas de entrada e 10 de saída
+
+    // Marca qual será a fita de saída que receberá o bloco resultante da passada atual da intercalação
+    int fitaSaida, passada;
+
+    // Verificando a quantidade total de blocos gerados inicialmente
+    int qtdBlocos = 0;
+    for (int i = entrada; i < entrada + 10; i++)
+    {
+        qtdBlocos += fitas[i].nBlocos;
+    }
+
+    // Executando até que tenhamos somente um bloco
+    while (qtdBlocos > 1)
+    {
+        // Reinicia as fitas para o início
+        for (int i = 0; i < NUM_FITAS; i++)
+        {
+            rewind(fitas[i].arquivo);
+        }
+
+        // Verificando a quantidade de fitas com blocos que irão participar da passada inicial
+        int qtdFitas = 0;
+        for (int i = entrada; i < entrada + 10; i++)
+        {
+            if (fitas[i].nBlocos > 0)
+            {
+                qtdFitas++;
+            }
+        }
+
+        passada = 1;
+
+        // Executa todas as passadas de intercalação nas fitas de entrada
+        while (qtdFitas > 0)
+        {
+            // Gerando os registros que terão os dados da intercalação
+            Intercalacao *dadosIntercalacao = (Intercalacao *)malloc(qtdFitas * sizeof(Intercalacao));
+            for (int i = 0; i < qtdFitas; i++)
+            {
+                dadosIntercalacao[i].qtdItensLidos = 0;
+                dadosIntercalacao[i].fitaAtiva = true;
+            }
+
+            // Calculando qual será a fita de saída, sendo que ela pode ocupar as dez e retornar para a primeira
+            fitaSaida = ((saida + passada - 1) % 10) + saida;
+
+            // Lendo o primeiro registro de cada bloco
+            for (int i = 0; i < qtdFitas; i++)
+            {
+                fread(&dadosIntercalacao[i].dadoLido, sizeof(Registro), 1, fitas[entrada + i].arquivo);
+                dadosIntercalacao[i].qtdItensLidos++;
+                stats->numLeituras++;
+            }
+
+            int posicaoMenorNota;
+            int qtdDadosEscritos = 0;
+
+            // Representa 1 passada
+            // Lendo todos os dados e escrevendo o que tiver a menor nota
+            while (true)
+            {
+                // Verifica se todos os dados dos blocos foram lidos
+                bool todosLidos = true;
+                for (int i = 0; i < qtdFitas; i++)
+                {
+                    if (dadosIntercalacao[i].fitaAtiva)
+                    {
+                        todosLidos = false;
+                        break;
+                    }
+                }
+                if (todosLidos)
+                    break;
+
+                // Procurando o menor registro entre as fitas ativas
+                posicaoMenorNota = -1;
+                for (int i = 0; i < qtdFitas; i++)
+                {
+                    if (dadosIntercalacao[i].fitaAtiva)
+                    {
+                        if (posicaoMenorNota == -1 || dadosIntercalacao[i].dadoLido.nota < dadosIntercalacao[posicaoMenorNota].dadoLido.nota)
+                        {
+                            posicaoMenorNota = i;
+                        }
+                    }
+                }
+                stats->numComparacoes++;
+
+                // Escrevendo o item de menor nota na fita de saída
+                fwrite(&dadosIntercalacao[posicaoMenorNota].dadoLido, sizeof(Registro), 1, fitas[fitaSaida].arquivo);
+                qtdDadosEscritos++;
+                stats->numEscritas++;
+
+                // Desativando a fita caso todos os seus itens já tenham sido lidos
+                if (dadosIntercalacao[posicaoMenorNota].qtdItensLidos == fitas[entrada + posicaoMenorNota].nItemsBloco[passada - 1])
+                {
+                    dadosIntercalacao[posicaoMenorNota].fitaAtiva = false;
+                    // Decrementando o número de blocos daquela fita
+                    fitas[entrada + posicaoMenorNota].nBlocos--;
+                }
+                // Lendo o próximo item da fita onde o registro retirado é proveniente, já que a fita ainda estiver ativa
+                else
+                {
+                    fread(&dadosIntercalacao[posicaoMenorNota].dadoLido, sizeof(Registro), 1, fitas[entrada + posicaoMenorNota].arquivo);
+                    dadosIntercalacao[posicaoMenorNota].qtdItensLidos++;
+                    stats->numLeituras++;
+                }
+            }
+
+            passada++;
+
+            // Atualizando o vetor que contém a quantidade de itens em cada bloco
+            fitas[fitaSaida].nBlocos++;
+            fitas[fitaSaida].nItemsBloco = realloc(fitas[fitaSaida].nItemsBloco, fitas[fitaSaida].nBlocos * sizeof(int));
+            fitas[fitaSaida].nItemsBloco[fitas[fitaSaida].nBlocos - 1] = qtdDadosEscritos;
+
+            free(dadosIntercalacao);
+
+            // Verificando a quantidade de fitas com blocos que irão participar da próxima passada
+            qtdFitas = 0;
+            for (int i = entrada; i < entrada + 10; i++)
+            {
+                if (fitas[i].nBlocos > 0)
+                {
+                    qtdFitas++;
+                }
+            }
+        }
+
+        // Se a fita atual for de leitura, a próxima será de saída e vice-versa
+        tipoFitaLeitura = tipoFitaLeitura == ENTRADA ? SAIDA : ENTRADA;
+
+        // Definindo quais fitas serão as de entrada e saída
+        if (tipoFitaLeitura == ENTRADA)
+        {
+            entrada = 0;
+            saida = 10;
+        }
+        else
+        {
+            entrada = 10;
+            saida = 0;
+        }
+
+        // Calculando a quantidade de blocos
+        qtdBlocos = 0;
+        for (int i = entrada; i < entrada + 10; i++)
+        {
+            qtdBlocos += fitas[i].nBlocos;
+        }
+    }
+
+    // Copia saída final para o arquivo que se quer ordenar
+    FILE *arqDestino = fopen("arquivo_ordenado.bin", "wb");
+    if (arqDestino == NULL)
+    {
+        printf("Não foi possível abrir o arquivo onde os dados serão salvos\n");
         return;
     }
 
-    printf("\nResultado da Ordenacao:\n");
-    printf("------------------------------------------------------------\n");
-    printf("Inscricao | Nota  | Estado | Cidade                      | Curso\n");
-    printf("------------------------------------------------------------\n");
+    // Lendo 20 dados, no máximo, e já escrevendo no arquivo de saída
+    Registro buffer[20];
+    size_t bytesLidos;
 
-    Registro reg;
-    while (1) {
-        reg = lerRegistro(fitaSaida);
-        if (reg.nota == -1) break;
-        printf("%-9s | %5.2f | %-6s | %-26s | %-30s\n",
-               reg.inscricao, reg.nota, reg.estado, reg.cidade, reg.curso);
+    stats->numLeituras++;
+    while ((bytesLidos = fread(buffer, sizeof(Registro), 20, fitas[fitaSaida].arquivo)) > 0)
+    {
+        stats->numLeituras++;
+        fwrite(buffer, sizeof(Registro), bytesLidos, arqDestino);
+        stats->numEscritas++;
     }
 
-    printf("------------------------------------------------------------\n");
-    fclose(fitaSaida);
+    fclose(arqDestino);
 }
 
-// Função principal para intercalação balanceada de dois caminhos (2f)
-void intercalacao_2f(const char* arquivoEntrada, int quantidade, int exibirResultado, Estatisticas* stats) {
-    Fitas fitas;
-    fitas.numFitasUsadas = 0;
-
-    // Inicializar as 20 fitas
-    for (int i = 0; i < NUM_FITAS; i++) {
-        char nomeFita[50];
-        sprintf(nomeFita, "fitas/fita%d.bin", i);
-        fitas.fitas[i] = fopen(nomeFita, "w+b");
-        if (!fitas.fitas[i]) {
-            perror("Erro ao criar fita");
-            exit(1);
-        }
-    }
+void intercalacao_2f(const char *arquivoEntrada, int quantidade, int exibirResultado, Estatisticas *stats)
+{
+    Fita fitas[NUM_2FFITAS];
+    inicializar2FFitas(fitas);
     printf("FITAS INICIADAS\n");
 
-    // Gerar blocos ordenados nas fitas de entrada
-    gerarBlocosOrdenados(arquivoEntrada, quantidade, &fitas, stats);
+    gerarBlocosOrdenados(arquivoEntrada, quantidade, fitas, stats);
     printf("GERACAO DE BLOCOS CONCLUIDA\n");
 
-    // Intercalar os blocos ordenados até obter o arquivo final ordenado
-    intercalarBlocos(&fitas, stats);
+    rewindFitas(fitas);
+
+    intercalarBlocos(fitas, stats);
     printf("INTERCALACAO DE BLOCOS CONCLUIDA\n");
 
-    // Fechar fitas
-    for (int i = 0; i < NUM_FITAS; i++) {
-        fclose(fitas.fitas[i]);
-    }
-
-    // Exibir o resultado final, se solicitado
-    if (exibirResultado) {
-        printResultadoOrdenacao();
-    }
+    freeFitas(fitas);
+    printf("FITAS LIBERADAS\n");
 }
