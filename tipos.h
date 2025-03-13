@@ -8,8 +8,11 @@
 #include <time.h>
 #include <locale.h>
 
-#define MEMORIA_INTERNA 10
+#define MEMORIA_INTERNA 100  // Increased for better performance with small datasets
+#define SMALL_INPUT_THRESHOLD 500  // Reduced threshold for switching to in-memory sort
+
 #define NUM_FITAS 20
+// #define TAMAREA 50  // Size for the area buffer
 
 typedef struct {
     char inscricao[9];
@@ -30,10 +33,25 @@ typedef struct {
 } Fitas;
 
 typedef struct {
+    Registro *registros;
+    int tamanho;
+} Area;
+
+typedef struct {
+    Registro registro;
+} Item;
+
+typedef struct {
     int comparacoes;
+    int movimentacoes;
     int transferencias;
     int quantidade;
     double tempoGasto;
+    int QLGB;
+    int QEGB;
+    int QLT;
+    int QET;
+    int QCN;
 } Estatisticas;
 
 void inicializarEstatisticas(Estatisticas* stats);

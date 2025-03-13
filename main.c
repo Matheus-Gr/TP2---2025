@@ -4,6 +4,7 @@
 #include "intercalacao_2f.h"
 #include "intercalacao_f1.h"
 #include "tipos.h"
+#include "quicksort_externo.h"
 #include <locale.h>
 
 int main(int argc, char *argv[]) {
@@ -48,8 +49,9 @@ int main(int argc, char *argv[]) {
             intercalacao_f1(arquivoEntrada, quantidade, exibirResultado, &estatisticas);
             break;
         case 3:
-            printf("Método 3 não implementado!\n");
-            return 1;
+            printf("Metodo 3 - Quicksort Externo\n");
+            quicksort_externo(arquivoEntrada, quantidade, exibirResultado, &estatisticas);
+            break;
         default:
             printf("Método inválido!\n");
             return 1;
