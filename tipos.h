@@ -1,65 +1,50 @@
-// tipos.h
 #ifndef TIPOS_H
 #define TIPOS_H
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <time.h>
-#include <locale.h>
-#include <stdbool.h>
 
-#define MEMORIA_INTERNA 10
-#define NUM_2FFITAS 20
+#define TAM_BUFFER 10
+#define NUM_FITAS 20
+
+// Add enum definition
+typedef enum
+{
+    ENTRADA,
+    SAIDA
+} TipoFita;
 
 typedef struct
 {
-    char inscricao[9];
+    long int inscricao;
     float nota;
     char estado[3];
     char cidade[51];
     char curso[31];
 } Registro;
 
-typedef enum
-{
-    ENTRADA,
-    SAIDA
-} TipoFita;
 typedef struct
 {
-    TipoFita tipo;
-    FILE *arquivo;
-    int nBlocos;
-    int *nItemsBloco;
-} Fita;
-
-typedef struct
-{
-    bool x;
-    Registro registro;
-} Item;
-
-typedef struct
-{
-    int numLeituras;
-    int numEscritas;
-    int numComparacoes;
-    clock_t inicioTempo;  // Tempo inicial
-    double tempoExecucao; // Tempo total de execução
+    long numComparacoes;
+    long numLeituras;
+    long numEscritas;
+    clock_t tempoInicio;
+    double tempoExecucao;
 } Estatisticas;
 
 typedef struct
 {
-    int qtdItensLidos; // Quantidade de itens lidos do bloco atual
-    Registro dadoLido; // Último registro lido da fita
-    bool fitaAtiva;    // Indica se a fita ainda tem dados para processar
-} Intercalacao;
+    FILE *arquivo;
+    char nome[20];
+    int ativo;
+} Fita;
 
-void inicializarEstatisticas(Estatisticas *stats);
-void finalizarEstatisticas(Estatisticas *stats);
-void mostrarEstatisticas(Estatisticas *stats);
-void inicializar2FFitas(Fita *fitas);
-void freeFitas(Fita *fitas);
+// Funções de estatísticas
+void inicializarEstatisticas(Estatisticas *est);
+void finalizarEstatisticas(Estatisticas *est);
+void mostrarEstatisticas(Estatisticas *est);
+
+// Add function declarations to fix implicit declarations
+void intercalacao_2f(const char *nomeArquivo, int quantidade, int exibirResultado, Estatisticas *est);
 
 #endif

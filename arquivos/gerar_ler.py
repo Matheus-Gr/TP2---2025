@@ -1,24 +1,33 @@
 import os
 
-# Definição dos parâmetros
-OPCAO = "gerar"  # Opções: "gerar" ou "ler"
-ARQUIVO = "2"  # Apenas necessário se OPCAO for "ler"
+# MAX_ALUNOS 471705
+BASE = "arquivos.exe"
+OPCAO = "gerar"
+REGISTROS = 471705
+SITUACAO = 3
+
+FORCAR_GERAR = True
 
 
 def compilar():
-    print("Compilando arquivos.c...")
-    if os.system("gcc -o gerar.exe ./arquivos.c") == 0:
-        print("Compilação bem-sucedida!")
+    print("[PYTHON] -> Compilando arquivos.c...")
+    if os.system(f"gcc -o {BASE} *c -Wall") == 0:
+        print("[PYTHON] -> Compilação bem-sucedida!")
     else:
-        print("Erro na compilação.")
+        print("[PYTHON] -> Erro na compilação.")
         exit(1)
 
 
 def executar():
-    comando = f"gerar.exe {OPCAO}"
+    comando = f"{BASE} {OPCAO} {REGISTROS}"
+
     if OPCAO == "ler":
-        comando += f" {ARQUIVO}"
-    print(f"Executando: {comando}")
+        if FORCAR_GERAR:
+            print(f"[PYTHON] -> Executando: {BASE} gerar {REGISTROS}")
+            os.system(f"{BASE} gerar {REGISTROS}")
+        comando += f" {SITUACAO}"
+
+    print(f"[PYTHON] -> Executando: {comando}")
     os.system(comando)
 
 
